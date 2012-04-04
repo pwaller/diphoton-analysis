@@ -1,0 +1,9 @@
+*.pyc
+
+/build*/
+/install/
+/data
+/work/
+
+/.lock*
+/.waf*

@@ -1,0 +1,10 @@
+package a4.atlas.ntup.photon;
+
+import "a4/atlas/ntup/photon/Event.proto";
+
+message EventExt {
+  extend Event {
+    optional int32 my_extension_value = 100000;
+  }
+}
+

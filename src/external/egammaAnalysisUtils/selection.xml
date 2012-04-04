@@ -1,0 +1,8 @@
+<lcgdict>
+  <class name="egammaSFclass" />
+  <class name="eg2011::EnergyRescaler" />
+  <class name="egammaOQ" />
+  <class name="ConvertedPhotonScaleTool" />
+  <class name="EisoTool" />
+  <class name="FsrPhotons" />
+</lcgdict>
