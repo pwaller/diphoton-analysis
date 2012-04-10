@@ -84,10 +84,27 @@ void Analysis::process(const ntup::Event& event) {
     //auto hard_process_photons = vector_of<ana::TruePhoton>(event.photon_truth_particles());
     auto hard_process_photons = vector_of_ptr(event.photon_truth_particles());
     REMOVE_IF(hard_process_photons, ph, !ph->ishardprocphoton());
+    SORT_KEY (hard_process_photons, ph, - ph->pt());
+    
+    const ntup::PhotonTruthParticle *phtr_1 = NULL, *phtr_2 = NULL;
+    
+    ALorentzVector phtr_1_lv, phtr_2_lv;
+                   
+    if (is_mc && hard_process_photons.size() >= 2) {
+        phtr_1 = hard_process_photons.at(0);
+        phtr_2 = hard_process_photons.at(1);
+        phtr_1_lv = ALorentzVector::from_ptetaphim(*phtr_1);
+        phtr_2_lv = ALorentzVector::from_ptetaphim(*phtr_2);
+    }
     
     auto gravitons = vector_of_ptr(event.photon_truth_particles());
     REMOVE_IF(gravitons, ph, ph->pdgid() != 5000039);
-    const double true_mgg = gravitons.size() ? gravitons[0]->m() : -999;
+    double true_mgg = -999;
+    if (gravitons.size())
+        true_mgg = gravitons[0]->m();
+    else if (is_mc && hard_process_photons.size() >= 2) {
+        true_mgg = (phtr_1_lv + phtr_2_lv).m();
+    }
     
     if (is_mc && C._require_mc_match && hard_process_photons.size() < 2)
         return;
@@ -112,19 +129,6 @@ void Analysis::process(const ntup::Event& event) {
         
     if (!good_vertex) return;
     PASSED("PV");
-                    
-    SORT_KEY (hard_process_photons, ph, - ph->pt());
-    
-    const ntup::PhotonTruthParticle *phtr_1 = NULL, *phtr_2 = NULL;
-    
-    ALorentzVector phtr_1_lv, phtr_2_lv;
-                   
-    if (is_mc && C._require_mc_match) {
-        phtr_1 = hard_process_photons.at(0);
-        phtr_2 = hard_process_photons.at(1);
-        phtr_1_lv = ALorentzVector::from_ptetaphim(*phtr_1);
-        phtr_2_lv = ALorentzVector::from_ptetaphim(*phtr_2);
-    }
     
     // This is here so that we can get the single-photon reco-efficiency
     EFFPLOT_1("2_pv");
