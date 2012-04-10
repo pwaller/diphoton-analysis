@@ -26,7 +26,8 @@ public:
          _do_plot,
          _do_sf_reweighting,
          _require_mc_match,
-         _write_anatree;
+         _write_anatree,
+         _filter_reco_photons;
 
     virtual void add_options(po::options_description_easy_init opt) {
         opt("grl", po::value(&_grl_name), "GRL file");
@@ -39,6 +40,7 @@ public:
         opt("require-mc-match", po::bool_switch(&_require_mc_match)->default_value(false), "Only pass photons which pass the hard process match");
         opt("write-anatree", po::bool_switch(&_write_anatree)->default_value(false), "Write analysis tree with corrected photons");
         opt("ee-event-file", po::value(&_ee_event_file), "Filename of list of events to exclude for ee cut");
+        opt("filter-reco-ph", po::bool_switch(&_filter_reco_photons)->default_value(false), "Filter reconstructed photons");
     }
 
     virtual void read_arguments(po::variables_map& arguments) {

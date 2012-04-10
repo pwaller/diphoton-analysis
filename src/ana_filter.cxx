@@ -37,27 +37,36 @@ void Filter::process(const ntup::Event& event) {
 void Filter::filter_photons(const ntup::Event& event, ntup::Event& new_event) {
     IndexOfPhoton photon_truth_to_keep, photon_ef_to_keep;
     
-    FILTER(original_index, const ntup::Photon& ph, photons) {
-     
-        // Reject photons in the crack
-        //if (etas2_crack(ph)) continue;
-                    
-        // Reject low pt photons
-        if (ph.pt() < 20e3)
-            continue;
-        
-        KEEP(photons, ph,
-            new_ph->set_original_index(original_index);
-            // Record true photon to keep
-            if (ph.has_truth_matched() && ph.truth_matched())
-                if (ph.truth_index() != -1)
-                    photon_truth_to_keep[ph.truth_index()] = new_ph;
+    if (C._filter_reco_photons) {
+        FILTER(original_index, const ntup::Photon& ph, photons) {
+         
+            // Reject photons in the crack
+            //if (etas2_crack(ph)) continue;
+                        
+            // Reject low pt photons
+            if (ph.pt() < 20e3)
+                continue;
             
-            // Record EFPhoton record to keep
-            if (ph.has_ef_index() && ph.ef_index() != -1)
-                if (ph.ef_index() != -1)
-                    photon_ef_to_keep[ph.ef_index()] = new_ph;
-        );
+            KEEP(photons, ph,
+                new_ph->set_original_index(original_index);
+                // Record true photon to keep
+                if (ph.has_truth_matched() && ph.truth_matched())
+                    if (ph.truth_index() != -1)
+                        photon_truth_to_keep[ph.truth_index()] = new_ph;
+                
+                // Record EFPhoton record to keep
+                if (ph.has_ef_index() && ph.ef_index() != -1)
+                    if (ph.ef_index() != -1)
+                        photon_ef_to_keep[ph.ef_index()] = new_ph;
+            );
+        }
+    } else {
+        foreach (auto& new_ph, *new_event.mutable_photons()) {
+            if (new_ph.truth_index() != -1)
+                photon_truth_to_keep[new_ph.truth_index()] = &new_ph;
+            if (new_ph.ef_index() != -1)
+                photon_ef_to_keep[new_ph.ef_index()] = &new_ph;
+        }
     }
             
     // Keep photons from the hard process or which are matched to 
