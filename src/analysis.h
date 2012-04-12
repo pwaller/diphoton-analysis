@@ -28,8 +28,8 @@ protected:
     shared<EnergyRescaler> _rescaler;
     shared<Root::TPileupReweighting> _pileup_tool;
     
-    bool _should_ptcut, _simulation;
-    double _pt_low, _pt_high;
+    bool _should_ptcut, _should_masscut, _simulation;
+    double _pt_low, _pt_high, _mass_low, _mass_high;
     uint32_t _current_run, _current_sample;
     
 public:

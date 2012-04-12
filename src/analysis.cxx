@@ -106,6 +106,10 @@ void Analysis::process(const ntup::Event& event) {
         true_mgg = (phtr_1_lv + phtr_2_lv).m();
     }
     
+    if (is_mc && _should_masscut)
+        if (true_mgg < _mass_low || true_mgg >= _mass_high)
+            return;
+    
     if (is_mc && C._require_mc_match && hard_process_photons.size() < 2)
         return;
             
@@ -300,6 +304,20 @@ void Analysis::new_sample(const ntup::Event& event) {
             break; // e.g. JF500
         default:
             _should_ptcut = false;
+    }
+    
+    switch (_current_sample) {
+        case 119584: // mc11_7TeV.119584.Pythiagamgam15_highmass
+            _should_masscut = true; _mass_low = 0;    _mass_high = 800e3;
+            break;
+        case 145606: // mc11_7TeV.145606.Pythiagamgam15_M_gt_800
+            _should_masscut = true; _mass_low = 800e3;  _mass_high = 1500e3;
+            break;
+        case 145607: // mc11_7TeV.145607.Pythiagamgam15_M_gt_1500
+            _should_masscut = true; _mass_low = 1500e3; _mass_high = 9999999999999;
+            break;
+        default:
+            _should_masscut = false;
     }
 }
 
