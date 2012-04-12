@@ -329,10 +329,12 @@ bool Analysis::pass_grl(const ntup::Event& event) {
 double Analysis::compute_mass(const ntup::Event& event, const Photon& lead, const Photon& sublead) const {
     double E1 = lead.corrected().e();
     double eta1 = lead->etas1();
+    assert(lead->has_etas1());
     double phi1 = lead->phi();
     
     double E2 = sublead.corrected().e();
     double eta2 = sublead->etas1();
+    assert(sublead->has_etas1());
     double phi2 = sublead->phi();
     
     double PV_ID = event.primary_vertices(0).z();
