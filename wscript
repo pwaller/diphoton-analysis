@@ -65,6 +65,11 @@ def build(bld):
         use=["analysis_externals", "analysis_protobuf", "A4"],
     )
     
-    #print bld.env
-
-    #bld.program(source="tut.cxx", target="tut", use=["A4"])
+    for path in bld.path.ant_glob("src/apps/**.cxx"):
+        bld.program(
+            "cxx",
+            source=[path],
+            includes="pch src src/external",
+            target=path.name[:-len(".cxx")],
+            use=["analysis_externals", "analysis_protobuf", "A4"],
+        )
