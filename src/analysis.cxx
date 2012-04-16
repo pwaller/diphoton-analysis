@@ -30,6 +30,20 @@ namespace ana {
 VariableAxis mass_logbins       (VariableAxis::log_bins(52, 425, 3000));
 VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 0, 3000));
 
+/*
+shared<a4::io::A4Message> Analysis::process_new_metadata() {
+    auto m = metadata();
+    auto& processing_step = *m.add_processing_steps();
+    processing_step.set_name("pwanalysis");
+    
+    m.set_sum_mc_weights(_sum_mc_weights); _sum_mc_weights = 0;
+    m.set_event_count(_event_count); _event_count = 0;
+    
+    DEBUG("Writing end metadata");
+    metadata_end_block(m);
+    return shared<a4::io::A4Message>();
+}*/
+
 inline void Analysis::get_smdiph_weight(const double mass_gev, 
                                          double& w, double& err) {
     const auto bin = C._smdiph_reweight.FindBin(mass_gev);
@@ -50,12 +64,14 @@ void Analysis::process(const ntup::Event& event) {
         
     #define EFFPLOT_1(name) \
     do { \
-        EFFPLOT(name); \
-        if (is_mc && phtr_1 && phtr_2) { \
-            S.T<H1>("eff/true_lead/pt/" name)(3000, 0, 3e6).fill(phtr_1->pt()); \
-            S.T<H1>("eff/true_lead/eta/" name)(100, -2.5, 2.5).fill(phtr_1->eta()); \
-            S.T<H1>("eff/true_sublead/pt/" name)(3000, 0, 3e6).fill(phtr_2->pt()); \
-            S.T<H1>("eff/true_sublead/eta/" name)(100, -2.5, 2.5).fill(phtr_2->eta()); \
+        if (is_mc) { \
+            EFFPLOT(name); \
+            if (phtr_1 && phtr_2) { \
+                S.T<H1>("eff/true_lead/pt/" name)(3000, 0, 3e6).fill(phtr_1->pt()); \
+                S.T<H1>("eff/true_lead/eta/" name)(100, -2.5, 2.5).fill(phtr_1->eta()); \
+                S.T<H1>("eff/true_sublead/pt/" name)(3000, 0, 3e6).fill(phtr_2->pt()); \
+                S.T<H1>("eff/true_sublead/eta/" name)(100, -2.5, 2.5).fill(phtr_2->eta()); \
+            } \
         } \
     } while(false)
         
@@ -74,7 +90,7 @@ void Analysis::process(const ntup::Event& event) {
     
     // MC: Pileup reweighting and run number reassignment
     float pileup_weight = 1.0;
-    if (!data && C._do_pileup_reweighting && systematic("prw")) {
+    if (!data && C._do_pileup_reweighting && !systematic("noprw")) {
         _pileup_tool->SetRandomSeed(event_number+1);
         pileup_weight = _pileup_tool->GetCombinedWeight(
             event.run_number(), 
@@ -277,7 +293,13 @@ void Analysis::process(const ntup::Event& event) {
     
     const double mgg = compute_mass(event, lead, sublead);
     
-    S.T<H1>("sel_reco_mgg")(7000, 0, 7e6).fill(mgg);
+    S.T<H1>("sel_reco_mgg")(7000, 0, 7e3, "m_{#gamma#gamma} [GeV]").fill(mgg / 1000);
+    S.T<H1>("sel_reco_mgg_log")
+        .with_axis(mass_logbins, "m_{#gamma#gamma} [GeV]")
+        .fill(mgg / 1000);
+    S.T<H1>("sel_reco_mgg_log_full")
+        .with_axis(mass_logbins_full, "m_{#gamma#gamma} [GeV]")
+        .fill(mgg / 1000);
     
     if (is_mc)
         resolution_plots(mgg, true_mgg);
@@ -372,7 +394,10 @@ double Analysis::compute_mass(const ntup::Event& event, const Photon& lead, cons
 }
 
 double Analysis::resolution_plots(double mgg, double true_mgg) {
-    S.T<H1>("sel_true_mgg")(7000, 0, 7e6).fill(true_mgg);
+    S.T<H1>("sel_true_mgg")(7000, 0, 7e3, "m_{#gamma#gamma} [GeV]").fill(true_mgg/1000.);
+    S.T<H1>("sel_true_mgg_log")
+        .with_axis(mass_logbins, "m_{#gamma#gamma} [GeV]")
+        .fill(true_mgg / 1000);
     
     S.T<H2>("sel_true_v_reco_mgg")
         (70, 0, 7e6, "m_{gg} (true)")

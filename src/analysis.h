@@ -33,6 +33,9 @@ protected:
     double _pt_low, _pt_high, _mass_low, _mass_high;
     uint32_t _current_run, _current_sample;
     
+    double _sum_mc_weights;
+    uint64_t _event_count;
+    
 public:
     static Analysis* construct(const std::string& name, Configuration* c);
 
