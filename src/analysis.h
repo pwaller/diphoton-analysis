@@ -47,11 +47,11 @@ public:
           _sum_mc_weights(0), _event_count(0)
         
     {
-        //set_metadata_behavior(MANUAL_BACKWARD);
+        set_metadata_behavior(MANUAL_BACKWARD);
     }
     
     virtual void process(const ntup::Event& event);
-    //virtual shared<a4::io::A4Message> process_new_metadata();
+    void process_end_metadata();
     
     // Called when a new mc_channel is encountered
     void new_sample(const ntup::Event& event);

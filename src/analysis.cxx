@@ -30,8 +30,7 @@ namespace ana {
 VariableAxis mass_logbins       (VariableAxis::log_bins(52, 425, 3000));
 VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 0, 3000));
 
-/*
-shared<a4::io::A4Message> Analysis::process_new_metadata() {
+void Analysis::process_end_metadata() {
     auto m = metadata();
     auto& processing_step = *m.add_processing_steps();
     processing_step.set_name("pwanalysis");
@@ -41,8 +40,7 @@ shared<a4::io::A4Message> Analysis::process_new_metadata() {
     
     DEBUG("Writing end metadata");
     metadata_end_block(m);
-    return shared<a4::io::A4Message>();
-}*/
+}
 
 inline void Analysis::get_smdiph_weight(const double mass_gev, 
                                          double& w, double& err) {
