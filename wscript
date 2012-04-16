@@ -25,13 +25,18 @@ update_outputs(gchx)
 
 def options(opt):
     opt.load('compiler_c compiler_cxx python')
-    opt.load('proto', tooldir="./common/waf")
+    opt.load('proto check_with', tooldir="./common/waf")
+    
+    opt.add_option('--with-a4', default=None,
+        help="Also look for a4 at the given path")
 
 def configure(conf):
     conf.load('compiler_c compiler_cxx python')
-    conf.load('proto', tooldir="./common/waf")
+    conf.load('proto check_with', tooldir="./common/waf")
     
-    conf.check_cfg(package="a4", uselib_store="A4", args="--libs --cflags")
+    conf.check_with(conf.check_cfg, "a4", package="a4", args="--cflags --libs")
+    
+    #conf.check_cfg(package="a4", uselib_store="A4", args="--libs --cflags")
     conf.env.RPATH_A4 = conf.env.LIBPATH_A4
     conf.env.LIB_A4.insert(0, "a4atlas")
     #conf.env.STLIB_A4.insert(0, "a4atlas")
