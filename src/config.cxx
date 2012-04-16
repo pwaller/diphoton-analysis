@@ -7,6 +7,7 @@ namespace ana {
 Configuration::Configuration() 
     : _smdiph_reweight("_smdiph_reweight", "_smdiph_reweight", 13, 0, 1300)
 {
+    _smdiph_reweight.SetDirectory(NULL);
     
     // kFactorVsMass_DiphoxNLO_mstw2008nlo_iso7GeV_16642_phD3PD000131_v_B_H4_iso_filt.root
     
