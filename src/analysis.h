@@ -6,6 +6,7 @@
 
 #include <a4/processor.h>
 #include <a4/atlas/ntup/photon/Event.pb.h>
+#include <a4/atlas/Event.pb.h>
 
 #include "config.h"
 
@@ -20,7 +21,7 @@ using a4::process::ProcessorOf;
 namespace ntup = a4::atlas::ntup::photon;
 
 
-class Analysis : public ProcessorOf<ntup::Event> {
+class Analysis : public ProcessorOf<ntup::Event, a4::atlas::EventMetaData> {
 protected:
     Configuration C;
     friend class Configuration;
@@ -28,21 +29,34 @@ protected:
     shared<EnergyRescaler> _rescaler;
     shared<Root::TPileupReweighting> _pileup_tool;
     
-    bool _should_ptcut, _should_masscut, _simulation;
+    bool _should_ptcut, _should_masscut, _simulation, _is_sm_diphoton_sample;
     double _pt_low, _pt_high, _mass_low, _mass_high;
     uint32_t _current_run, _current_sample;
     
 public:
     static Analysis* construct(const std::string& name, Configuration* c);
 
-    Analysis(Configuration* c) : C(*c) {}
-    void process(const ntup::Event& event);
+    Analysis(Configuration* c)
+        : C(*c),
+          _should_ptcut(false), _should_masscut(false),
+          _simulation(false), _is_sm_diphoton_sample(false),
+          _current_run(false), _current_sample(false),
+          _sum_mc_weights(0), _event_count(0)
+        
+    {
+        //set_metadata_behavior(MANUAL_BACKWARD);
+    }
+    
+    virtual void process(const ntup::Event& event);
+    //virtual shared<a4::io::A4Message> process_new_metadata();
     
     // Called when a new mc_channel is encountered
     void new_sample(const ntup::Event& event);
     bool pass_grl(const ntup::Event& event);
     double compute_mass(const ntup::Event& event, const Photon& lead, const Photon& sublead) const;
     double resolution_plots(double mgg, double true_mgg);
+    
+    void get_smdiph_weight(const double mass_gev, double& w, double& err);
 
 };
 

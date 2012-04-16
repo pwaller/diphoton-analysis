@@ -6,6 +6,8 @@
 using a4::hist::H1;
 using a4::hist::H2;
 using a4::hist::Cutflow;
+#include <a4/axis.h>
+using a4::hist::VariableAxis;
 
 #include <a4/utility.h>
 using a4::process::utility::vector_of_ptr;
@@ -25,8 +27,17 @@ namespace ntup = a4::atlas::ntup::photon;
 namespace ana {
 
 
-void Analysis::process(const ntup::Event& event) {
+VariableAxis mass_logbins       (VariableAxis::log_bins(52, 425, 3000));
+VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 0, 3000));
 
+inline void Analysis::get_smdiph_weight(const double mass_gev, 
+                                         double& w, double& err) {
+    const auto bin = C._smdiph_reweight.FindBin(mass_gev);
+    w = C._smdiph_reweight.GetBinContent(bin);
+    err = C._smdiph_reweight.GetBinError(bin);
+}
+
+void Analysis::process(const ntup::Event& event) {
     if (event.run_number() != _current_run || 
         event.mc_channel_number() != _current_sample)
         new_sample(event);
@@ -79,8 +90,6 @@ void Analysis::process(const ntup::Event& event) {
         S.mul_weight(pileup_weight);
     }
     
-    PASSED("Total");
-    
     //auto hard_process_photons = vector_of<ana::TruePhoton>(event.photon_truth_particles());
     auto hard_process_photons = vector_of_ptr(event.photon_truth_particles());
     REMOVE_IF(hard_process_photons, ph, !ph->ishardprocphoton());
@@ -106,14 +115,30 @@ void Analysis::process(const ntup::Event& event) {
         true_mgg = (phtr_1_lv + phtr_2_lv).m();
     }
     
+    if (_is_sm_diphoton_sample) {
+        double w = 1, err = 0;
+        get_smdiph_weight(true_mgg, w, err);
+        if (systematic("kfac_up"))
+            w += err;
+        else if (systematic("kfac_down"))
+            w -= err;
+        S.mul_weight(w);
+            
+    }
+    
+    _event_count += 1;
+    _sum_mc_weights += S.weight();
+    
+    PASSED("Total");
+    
     if (is_mc && _should_masscut)
         if (true_mgg < _mass_low || true_mgg >= _mass_high)
             return;
     
     if (is_mc && C._require_mc_match && hard_process_photons.size() < 2)
         return;
-            
-    PASSED("Hardproc 2#gamma");
+    
+    PASSED("Good MC");
     
     EFFPLOT("0_total");
     
@@ -308,16 +333,20 @@ void Analysis::new_sample(const ntup::Event& event) {
     
     switch (_current_sample) {
         case 119584: // mc11_7TeV.119584.Pythiagamgam15_highmass
-            _should_masscut = true; _mass_low = 0;    _mass_high = 800e3;
+            _is_sm_diphoton_sample = _should_masscut = true;
+            _mass_low = 0;      _mass_high = 800e3;
+            true;
             break;
         case 145606: // mc11_7TeV.145606.Pythiagamgam15_M_gt_800
-            _should_masscut = true; _mass_low = 800e3;  _mass_high = 1500e3;
+            _is_sm_diphoton_sample = _should_masscut = true;
+            _mass_low = 800e3;  _mass_high = 1500e3;
             break;
         case 145607: // mc11_7TeV.145607.Pythiagamgam15_M_gt_1500
-            _should_masscut = true; _mass_low = 1500e3; _mass_high = 9999999999999;
+            _is_sm_diphoton_sample = _should_masscut = true;
+            _mass_low = 1500e3; _mass_high = 9999999999999;
             break;
         default:
-            _should_masscut = false;
+            _is_sm_diphoton_sample = _should_masscut = false;
     }
 }
 

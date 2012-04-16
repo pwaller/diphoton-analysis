@@ -7,6 +7,8 @@ using a4::atlas::GRL;
 using a4::atlas::FileGRL;
 using a4::atlas::NoGRL;
 
+#include <TH1D.h>
+
 #include "event_list.h"
 #include "external.h"
 
@@ -28,6 +30,8 @@ public:
          _require_mc_match,
          _write_anatree,
          _filter_reco_photons;
+         
+    TH1D _smdiph_reweight;
 
     virtual void add_options(po::options_description_easy_init opt) {
         opt("grl", po::value(&_grl_name), "GRL file");
@@ -42,6 +46,8 @@ public:
         opt("ee-event-file", po::value(&_ee_event_file), "Filename of list of events to exclude for ee cut");
         opt("filter-reco-ph", po::bool_switch(&_filter_reco_photons)->default_value(false), "Filter reconstructed photons");
     }
+    
+    Configuration();
 
     virtual void read_arguments(po::variables_map& arguments) {
         if (arguments.count("grl")) 
