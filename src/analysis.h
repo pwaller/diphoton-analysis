@@ -4,6 +4,9 @@
 #include <string>
 #include <iostream>
 
+#include <a4/application.h>
+using a4::store::ObjectStore;
+
 #include <a4/processor.h>
 #include <a4/atlas/ntup/photon/Event.pb.h>
 #include <a4/atlas/Event.pb.h>
@@ -20,6 +23,12 @@ class Configuration;
 using a4::process::ProcessorOf;
 namespace ntup = a4::atlas::ntup::photon;
 
+class ResonanceSample {
+public:
+    int ds_number;
+    const char* dirname;
+    double mass, km, width, xs;
+};
 
 class Analysis : public ProcessorOf<ntup::Event, a4::atlas::EventMetaData> {
 protected:
@@ -36,6 +45,8 @@ protected:
     double _sum_mc_weights;
     uint64_t _event_count;
     
+    const ResonanceSample* _current_resonance;
+    
 public:
     static Analysis* construct(const std::string& name, Configuration* c);
 
@@ -44,7 +55,8 @@ public:
           _should_ptcut(false), _should_masscut(false),
           _simulation(false), _is_sm_diphoton_sample(false),
           _current_run(false), _current_sample(false),
-          _sum_mc_weights(0), _event_count(0)
+          _sum_mc_weights(0), _event_count(0),
+          _current_resonance(NULL)
         
     {
         set_metadata_behavior(MANUAL_BACKWARD);
@@ -60,6 +72,17 @@ public:
     double resolution_plots(double mgg, double mgg_true);
     
     void get_smdiph_weight(const double mass_gev, double& w, double& err);
+    
+    inline void make_resonance_plots(
+        ObjectStore D, const ntup::Event& event,
+        const Photon& lead, const Photon& sublead,
+        const double mgg, const double mgg_true,
+        double mass, double km, double width, double cross_section);
+    inline void make_resonances_plots(
+        const uint32_t number,
+        const ntup::Event& event,
+        const Photon& lead, const Photon& sublead,
+        const double mgg, const double mgg_true);
 
 };
 

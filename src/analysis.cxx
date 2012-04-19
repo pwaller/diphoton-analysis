@@ -1,6 +1,11 @@
 #include "all.h"
 
 #include <iostream>
+#include <unordered_map>
+#include <math.h>
+
+#include <a4/application.h>
+using a4::store::ObjectStore;
 
 #include <a4/histogram.h>
 using a4::hist::H1;
@@ -27,15 +32,48 @@ namespace ntup = a4::atlas::ntup::photon;
 namespace ana {
 
 
-class ResonanceSample {
-public:
-    int ds_number;
-    double mass, km, width, xs;
+const std::unordered_map<int, ResonanceSample> resonance_samples = {
+    { 105324, {105324, "105324/", 1250, 0.05, 4.725, 9.08 } },
+    { 105623, {105623, "105623/", 500, 0.01, 0.075, 82.5 } },
+    { 105833, {105833, "105833/", 800, 0.03, 1.088, 54.4 } },
+    { 105834, {105834, "105834/", 1000, 0.03, 1.361, 13.9 } },
+    { 105835, {105835, "105835/", 700, 0.05, 2.646, 329.5 } },
+    { 105836, {105836, "105836/", 1000, 0.05, 3.78, 39.0 } },
+    { 105837, {105837, "105837/", 1500, 0.05, 4.725, 2.64 } },
+    { 105838, {105838, "105838/", 800, 0.1, 12.09, 600.9 } },
+    { 105839, {105839, "105839/", 1000, 0.1, 15.12, 152.6 } },
+    { 105841, {105841, "105841/", 1250, 0.1, 18.9, 36.1 } },
+    { 105842, {105842, "105842/", 1250, 0.1, 18.9, 36.1 } },
+    { 106623, {106623, "106623/", 800, 0.01, 0.12, 6.0 } },
+    { 106643, {106643, "106643/", 1000, 0.01, 0.151, 1.56 } },
+    { 106644, {106644, "106644/", 500, 0.03, 0.68, 741.8 } },
+    { 106684, {106684, "106684/", 300, 0.01, 0.045, 1052.0 } },
+    { 115557, {115557, "115557/", 700, 0.01, 0.089, 12.98 } },
+    { 115558, {115558, "115558/", 700, 0.03, 0.871, 116.3 } },
+    { 115559, {115559, "115559/", 800, 0.05, 2.79, 150.1 } },
+    { 115560, {115560, "115560/", 900, 0.03, 1.15, 26.94 } },
+    { 115561, {115561, "115561/", 900, 0.05, 2.98, 74.99 } },
+    { 115562, {115562, "115562/", 900, 0.07, 5.67, 142.8 } },
+    { 115563, {115563, "115563/", 900, 0.1, 12.06, 293.1 } },
+    { 115564, {115564, "115564/", 1100, 0.05, 3.75, 20.99 } },
+    { 115565, {115565, "115565/", 1100, 0.07, 7.44, 41.15 } },
+    { 115566, {115566, "115566/", 1100, 0.1, 14.93, 83.46 } },
+    { 115567, {115567, "115567/", 1100, 0.2, 57.6, 326.5 } },
+    { 115568, {115568, "115568/", 1500, 0.1, 8.23, 10.5 } },
+    { 115569, {115569, "115569/", 1250, 0.15, 37.3, 81.07 } },
+    { 115570, {115570, "115570/", 1250, 0.2, 65.2, 142.2 } },
+    { 119870, {119870, "119870/", 1750, 0.1, 26.46, 3.44 } },
+    { 119871, {119871, "119871/", 2000, 0.1, 30.24, 1.21 } },
+    { 119872, {119872, "119872/", 2250, 0.1, 34.02, 0.46 } },
 };
 
-std::unordered_set<ResonanceSample> resonance_samples = {
-    {123, {}},
-};
+const ResonanceSample* get_resonance(const ntup::Event& e) {
+    if (e.has_mc_channel_number() == 0) return NULL;
+    const auto& i = resonance_samples.find(e.mc_channel_number());
+    if (i != resonance_samples.end())
+        return &i->second;
+    return NULL;
+}
 
 // Why!?
 // Gives 10^-12 compatibility with reducible template
@@ -51,7 +89,6 @@ void Analysis::process_end_metadata() {
     m.set_sum_mc_weights(_sum_mc_weights); _sum_mc_weights = 0;
     m.set_event_count(_event_count); _event_count = 0;
     
-    DEBUG("Writing end metadata");
     metadata_end_block(m);
 }
 
@@ -60,6 +97,80 @@ inline void Analysis::get_smdiph_weight(const double mass_gev,
     const auto bin = C._smdiph_reweight.FindBin(mass_gev);
     w = C._smdiph_reweight.GetBinContent(bin);
     err = C._smdiph_reweight.GetBinError(bin);
+}
+
+
+inline void Analysis::make_resonance_plots(
+    ObjectStore D, const ntup::Event& event,
+    const Photon& lead, const Photon& sublead,
+    const double mgg, const double mgg_true, 
+    double mass, double km, double width, double cross_section) 
+{    
+    const double resolution = 1.208688 + 0.009822771*mgg_true;
+    const double resol_width = hypot(width, resolution);
+    
+    D.T<H1>("mgg")     (100, mass - resol_width*5, mass + resol_width*5).fill(mgg / 1000);
+    D.T<H1>("mgg_true")(100, mass - width*5,       mass + width*5      ).fill(mgg_true / 1000);
+    
+}
+
+inline void Analysis::make_resonances_plots(
+    const uint32_t number,
+    const ntup::Event& event,
+    const Photon& lead, const Photon& sublead,
+    const double mgg, const double mgg_true) {
+    
+    switch (number) {
+        case 105324: make_resonance_plots(S("resonances/105324/"), event, lead, sublead, mgg, mgg_true, 1250, 0.05, 4.725, 9.08); break;
+        case 105623: make_resonance_plots(S("resonances/105623/"), event, lead, sublead, mgg, mgg_true, 500, 0.01, 0.075, 82.5); break;
+        case 105833: make_resonance_plots(S("resonances/105833/"), event, lead, sublead, mgg, mgg_true, 800, 0.03, 1.088, 54.4); break;
+        case 105834: make_resonance_plots(S("resonances/105834/"), event, lead, sublead, mgg, mgg_true, 1000, 0.03, 1.361, 13.9); break;
+        case 105835: make_resonance_plots(S("resonances/105835/"), event, lead, sublead, mgg, mgg_true, 700, 0.05, 2.646, 329.5); break;
+        case 105836: make_resonance_plots(S("resonances/105836/"), event, lead, sublead, mgg, mgg_true, 1000, 0.05, 3.78, 39.0); break;
+        case 105837: make_resonance_plots(S("resonances/105837/"), event, lead, sublead, mgg, mgg_true, 1500, 0.05, 4.725, 2.64); break;
+        case 105838: make_resonance_plots(S("resonances/105838/"), event, lead, sublead, mgg, mgg_true, 800, 0.1, 12.09, 600.9); break;
+        case 105839: make_resonance_plots(S("resonances/105839/"), event, lead, sublead, mgg, mgg_true, 1000, 0.1, 15.12, 152.6); break;
+        case 105841: make_resonance_plots(S("resonances/105841/"), event, lead, sublead, mgg, mgg_true, 1250, 0.1, 18.9, 36.1); break;
+        case 106623: make_resonance_plots(S("resonances/106623/"), event, lead, sublead, mgg, mgg_true, 800, 0.01, 0.12, 6.0); break;
+        case 106643: make_resonance_plots(S("resonances/106643/"), event, lead, sublead, mgg, mgg_true, 1000, 0.01, 0.151, 1.56); break;
+        case 106644: make_resonance_plots(S("resonances/106644/"), event, lead, sublead, mgg, mgg_true, 500, 0.03, 0.68, 741.8); break;
+        case 106684: make_resonance_plots(S("resonances/106684/"), event, lead, sublead, mgg, mgg_true, 300, 0.01, 0.045, 1052.0); break;
+        case 115557: make_resonance_plots(S("resonances/115557/"), event, lead, sublead, mgg, mgg_true, 700, 0.01, 0.089, 12.98); break;
+        case 115558: make_resonance_plots(S("resonances/115558/"), event, lead, sublead, mgg, mgg_true, 700, 0.03, 0.871, 116.3); break;
+        case 115559: make_resonance_plots(S("resonances/115559/"), event, lead, sublead, mgg, mgg_true, 800, 0.05, 2.79, 150.1); break;
+        case 115560: make_resonance_plots(S("resonances/115560/"), event, lead, sublead, mgg, mgg_true, 900, 0.03, 1.15, 26.94); break;
+        case 115561: make_resonance_plots(S("resonances/115561/"), event, lead, sublead, mgg, mgg_true, 900, 0.05, 2.98, 74.99); break;
+        case 115562: make_resonance_plots(S("resonances/115562/"), event, lead, sublead, mgg, mgg_true, 900, 0.07, 5.67, 142.8); break;
+        case 115563: make_resonance_plots(S("resonances/115563/"), event, lead, sublead, mgg, mgg_true, 900, 0.1, 12.06, 293.1); break;
+        case 115564: make_resonance_plots(S("resonances/115564/"), event, lead, sublead, mgg, mgg_true, 1100, 0.05, 3.75, 20.99); break;
+        case 115565: make_resonance_plots(S("resonances/115565/"), event, lead, sublead, mgg, mgg_true, 1100, 0.07, 7.44, 41.15); break;
+        case 115566: make_resonance_plots(S("resonances/115566/"), event, lead, sublead, mgg, mgg_true, 1100, 0.1, 14.93, 83.46); break;
+        case 115567: make_resonance_plots(S("resonances/115567/"), event, lead, sublead, mgg, mgg_true, 1100, 0.2, 57.6, 326.5); break;
+        case 115568: make_resonance_plots(S("resonances/115568/"), event, lead, sublead, mgg, mgg_true, 1500, 0.1, 8.23, 10.5); break;
+        case 115569: make_resonance_plots(S("resonances/115569/"), event, lead, sublead, mgg, mgg_true, 1250, 0.15, 37.3, 81.07); break;
+        case 115570: make_resonance_plots(S("resonances/115570/"), event, lead, sublead, mgg, mgg_true, 1250, 0.2, 65.2, 142.2); break;
+        case 119870: make_resonance_plots(S("resonances/119870/"), event, lead, sublead, mgg, mgg_true, 1750, 0.1, 26.46, 3.44); break;
+        case 119871: make_resonance_plots(S("resonances/119871/"), event, lead, sublead, mgg, mgg_true, 2000, 0.1, 30.24, 1.21); break;
+        case 119872: make_resonance_plots(S("resonances/119872/"), event, lead, sublead, mgg, mgg_true, 2250, 0.1, 34.02, 0.46); break;
+        
+        case 145536:
+        {
+            // Template sample
+            const int samples[] = {105324, 105623, 105833, 105834, 105835, 
+                105836, 105837, 105838, 105839, 105841, 106623, 106643, 106644,
+                106684, 115557, 115558, 115559, 115560, 115561, 115562, 115563, 
+                115564, 115565, 115566, 115567, 115568, 115569, 115570, 119870, 
+                119871, 119872};
+            foreach (const int&s, samples) {
+                // TODO(pwaller): Reweighting!
+                make_resonances_plots(s, event, lead, sublead, mgg, mgg_true);
+            }
+            break;
+        }
+        
+        default:
+            break;
+    }
 }
 
 void Analysis::process(const ntup::Event& event) {
@@ -98,6 +209,14 @@ void Analysis::process(const ntup::Event& event) {
         
     uint32_t event_number = event.event_number();
     uint32_t run_number = event.run_number();
+    
+    if (is_mc)
+        S.mul_weight(event.mc_event_weight());
+    
+    if (rerun_systematics_current == NULL) {
+        _event_count += 1;
+        _sum_mc_weights += S.weight();
+    }
     
     // MC: Pileup reweighting and run number reassignment
     float pileup_weight = 1.0;
@@ -149,12 +268,13 @@ void Analysis::process(const ntup::Event& event) {
             w += err;
         else if (systematic("kfac_down"))
             w -= err;
+        if (systematic("kfac_off"))
+            w = 1;
         S.mul_weight(w);
-            
     }
     
-    _event_count += 1;
-    _sum_mc_weights += S.weight();
+    
+    //S.T<H1>("weight")(100, 0, 3, "weight").fill(S.weight());
     
     PASSED("Total");
     
@@ -325,14 +445,19 @@ void Analysis::process(const ntup::Event& event) {
     
     if (mgg < 140e3) return;
     PASSED("mgg140");
-    
+        
     EFFPLOT_1("11_mass");
+    
+    make_resonances_plots(event.mc_channel_number(), event, 
+                          lead, sublead, mgg, mgg_true);
 }
 
 void Analysis::new_sample(const ntup::Event& event) {
     _current_run = event.run_number();
     _current_sample = event.mc_channel_number();
     _simulation = event.issimulation();
+    
+    _current_resonance = get_resonance(event);
     
     switch (_current_sample) {
         // Samples: 
