@@ -27,6 +27,15 @@ namespace ntup = a4::atlas::ntup::photon;
 namespace ana {
 
 
+class ResonanceSample {
+public:
+    int ds_number;
+    double mass, km, width, xs;
+};
+
+std::unordered_set<ResonanceSample> resonance_samples = {
+    {123, {}},
+};
 
 // Why!?
 // Gives 10^-12 compatibility with reducible template
