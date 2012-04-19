@@ -27,8 +27,12 @@ namespace ntup = a4::atlas::ntup::photon;
 namespace ana {
 
 
-VariableAxis mass_logbins       (VariableAxis::log_bins(52, 425, 3000));
-VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 0, 3000));
+
+// Why!?
+// Gives 10^-12 compatibility with reducible template
+const double low_mass_edge = 409.40104882461151;
+VariableAxis mass_logbins       (VariableAxis::log_bins(53, low_mass_edge, 3000));
+VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 10, 3000));
 
 void Analysis::process_end_metadata() {
     auto m = metadata();
