@@ -57,7 +57,7 @@ public:
     void new_sample(const ntup::Event& event);
     bool pass_grl(const ntup::Event& event);
     double compute_mass(const ntup::Event& event, const Photon& lead, const Photon& sublead) const;
-    double resolution_plots(double mgg, double true_mgg);
+    double resolution_plots(double mgg, double mgg_true);
     
     void get_smdiph_weight(const double mass_gev, double& w, double& err);
 

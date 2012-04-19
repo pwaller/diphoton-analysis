@@ -58,7 +58,7 @@ void Analysis::process(const ntup::Event& event) {
         S.T<Cutflow>("cutflow").passed(x);
         
     #define EFFPLOT(name) \
-        S.T<H1>("eff/true_mgg/" name)(7000, 0, 7e6).fill(true_mgg); \
+        S.T<H1>("eff/mgg_true/" name)(7000, 0, 7e6).fill(mgg_true); \
         
     #define EFFPLOT_1(name) \
     do { \
@@ -122,16 +122,16 @@ void Analysis::process(const ntup::Event& event) {
     
     auto gravitons = vector_of_ptr(event.photon_truth_particles());
     REMOVE_IF(gravitons, ph, ph->pdgid() != 5000039);
-    double true_mgg = -999;
+    double mgg_true = -999;
     if (gravitons.size())
-        true_mgg = gravitons[0]->m();
+        mgg_true = gravitons[0]->m();
     else if (is_mc && hard_process_photons.size() >= 2) {
-        true_mgg = (phtr_1_lv + phtr_2_lv).m();
+        mgg_true = (phtr_1_lv + phtr_2_lv).m();
     }
     
     if (_is_sm_diphoton_sample) {
         double w = 1, err = 0;
-        get_smdiph_weight(true_mgg, w, err);
+        get_smdiph_weight(mgg_true / 1000., w, err);
         if (systematic("kfac_up"))
             w += err;
         else if (systematic("kfac_down"))
@@ -146,7 +146,7 @@ void Analysis::process(const ntup::Event& event) {
     PASSED("Total");
     
     if (is_mc && _should_masscut)
-        if (true_mgg < _mass_low || true_mgg >= _mass_high)
+        if (mgg_true < _mass_low || mgg_true >= _mass_high)
             return;
     
     if (is_mc && C._require_mc_match && hard_process_photons.size() < 2)
@@ -300,7 +300,7 @@ void Analysis::process(const ntup::Event& event) {
         .fill(mgg / 1000);
     
     if (is_mc)
-        resolution_plots(mgg, true_mgg);
+        resolution_plots(mgg, mgg_true);
         
     if (event.larerror() > 1) return;
     PASSED("LarOK");
@@ -391,31 +391,35 @@ double Analysis::compute_mass(const ntup::Event& event, const Photon& lead, cons
     return mgg;
 }
 
-double Analysis::resolution_plots(double mgg, double true_mgg) {
-    S.T<H1>("sel_true_mgg")(7000, 0, 7e3, "m_{#gamma#gamma} [GeV]").fill(true_mgg/1000.);
-    S.T<H1>("sel_true_mgg_log")
+double Analysis::resolution_plots(double mgg, double mgg_true) {
+    S.T<H1>("sel_mgg_true")(7000, 0, 7e3, "m_{#gamma#gamma} [GeV]").fill(mgg_true/1000.);
+    
+    S.T<H1>("sel_mgg_true_log")
         .with_axis(mass_logbins, "m_{#gamma#gamma} [GeV]")
-        .fill(true_mgg / 1000);
+        .fill(mgg_true / 1000);
+    S.T<H1>("sel_mgg_true_log_full")
+        .with_axis(mass_logbins_full, "m_{#gamma#gamma} [GeV]")
+        .fill(mgg_true / 1000);
     
     S.T<H2>("sel_true_v_reco_mgg")
         (70, 0, 7e6, "m_{gg} (true)")
         (70, 0, 7e6, "m_{gg} (reco)")
-        .fill(true_mgg, mgg);
+        .fill(mgg_true, mgg);
         
     S.T<H2>("sel_true_v_reco_mgg_limited")
         (400, 0, 2e6, "m_{gg} (true)")
         (400, 0, 2e6, "m_{gg} (reco)")
-        .fill(true_mgg, mgg);
+        .fill(mgg_true, mgg);
         
     S.T<H2>("sel_true_v_recores_mgg")
         (70, 0, 7e6, "m_{gg} (true)")
         (200, -100e3, 100e3, "m_{gg} (reco) - m_{gg} (true)")
-        .fill(true_mgg, mgg - true_mgg);
+        .fill(mgg_true, mgg - mgg_true);
         
     S.T<H2>("sel_true_v_recoresrel_mgg")
         (70, 0, 7e6, "m_{gg} (true)")
         (400, -0.1, 0.1, "(m_{gg} (reco) - m_{gg} (true)) / m_{gg} (true)")
-        .fill(true_mgg, (mgg - true_mgg) / true_mgg);
+        .fill(mgg_true, (mgg - mgg_true) / mgg_true);
 }
 
 
