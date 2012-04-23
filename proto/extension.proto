@@ -1,10 +1,18 @@
 package a4.atlas.ntup.photon;
 
 import "a4/atlas/ntup/photon/Event.proto";
+import "a4/atlas/ntup/photon/Photon.proto";
 
 message EventExt {
   extend Event {
-    optional int32 my_extension_value = 100000;
+    optional double mgg = 100000;
+    optional double weight_to_bad_sample = 100001;
+  }
+}
+
+message PhotonExt {
+  extend Photon {
+    optional Photon corrected = 100000;
   }
 }
 

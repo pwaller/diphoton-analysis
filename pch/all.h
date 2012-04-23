@@ -9,6 +9,7 @@
 #include <a4/cutflow.h>
 
 #include <a4/atlas/ntup/photon/Event.pb.h>
+#include <a4/atlas/EventMetaData.pb.h>
 
 #include "external.h"
 

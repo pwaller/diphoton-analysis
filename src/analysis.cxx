@@ -26,6 +26,7 @@ using a4::process::utility::in_map;
 
 //using a4::atlas::ntup::photon::Event;
 #include <a4/atlas/ntup/photon/Event.pb.h>
+#include <proto/extension.pb.h>
 
 namespace ntup = a4::atlas::ntup::photon;
 
@@ -106,14 +107,17 @@ inline void Analysis::get_smdiph_weight(const double mass_gev,
 inline void Analysis::make_resonance_plots(
     ObjectStore D, const ntup::Event& event,
     const Photon& lead, const Photon& sublead,
-    const double mgg, const double mgg_true, 
-    double mass, double km, double width, double cross_section) 
-{    
-    const double resolution = 1.208688 + 0.009822771*mgg_true;
-    const double resol_width = hypot(width, resolution);
+    const double mgg, const double mgg_true,
+    const ResonanceSample* resonance)
+{
+    const double mass = resonance->mass,
+                  width = resonance->width;
     
-    D.T<H1>("mgg")     (100, mass - resol_width*5, mass + resol_width*5).fill(mgg / 1000);
-    D.T<H1>("mgg_true")(100, mass - width*5,       mass + width*5      ).fill(mgg_true / 1000);
+    const double resolution = 1.208688 + 0.009822771*(mgg_true / 1000),
+                  resol_width = hypot(width, resolution);
+    
+    D.T<H1>("mgg")     (100, mass - resol_width*5, mass + resol_width*5, "m_{#gamma#gamma} [GeV]").fill(mgg / 1000);
+    D.T<H1>("mgg_true")(100, mass - width*5,       mass + width*5      , "m_{#gamma#gamma} [GeV]").fill(mgg_true / 1000);
     
 }
 
@@ -123,61 +127,48 @@ inline void Analysis::make_resonances_plots(
     const Photon& lead, const Photon& sublead,
     const double mgg, const double mgg_true) {
     
-    switch (number) {
-        case 105324: make_resonance_plots(S("resonances/105324/"), event, lead, sublead, mgg, mgg_true, 1250, 0.05, 4.725, 9.08); break;
-        case 105623: make_resonance_plots(S("resonances/105623/"), event, lead, sublead, mgg, mgg_true, 500, 0.01, 0.075, 82.5); break;
-        case 105833: make_resonance_plots(S("resonances/105833/"), event, lead, sublead, mgg, mgg_true, 800, 0.03, 1.088, 54.4); break;
-        case 105834: make_resonance_plots(S("resonances/105834/"), event, lead, sublead, mgg, mgg_true, 1000, 0.03, 1.361, 13.9); break;
-        case 105835: make_resonance_plots(S("resonances/105835/"), event, lead, sublead, mgg, mgg_true, 700, 0.05, 2.646, 329.5); break;
-        case 105836: make_resonance_plots(S("resonances/105836/"), event, lead, sublead, mgg, mgg_true, 1000, 0.05, 3.78, 39.0); break;
-        case 105837: make_resonance_plots(S("resonances/105837/"), event, lead, sublead, mgg, mgg_true, 1500, 0.05, 4.725, 2.64); break;
-        case 105838: make_resonance_plots(S("resonances/105838/"), event, lead, sublead, mgg, mgg_true, 800, 0.1, 12.09, 600.9); break;
-        case 105839: make_resonance_plots(S("resonances/105839/"), event, lead, sublead, mgg, mgg_true, 1000, 0.1, 15.12, 152.6); break;
-        case 105841: make_resonance_plots(S("resonances/105841/"), event, lead, sublead, mgg, mgg_true, 1250, 0.1, 18.9, 36.1); break;
-        case 106623: make_resonance_plots(S("resonances/106623/"), event, lead, sublead, mgg, mgg_true, 800, 0.01, 0.12, 6.0); break;
-        case 106643: make_resonance_plots(S("resonances/106643/"), event, lead, sublead, mgg, mgg_true, 1000, 0.01, 0.151, 1.56); break;
-        case 106644: make_resonance_plots(S("resonances/106644/"), event, lead, sublead, mgg, mgg_true, 500, 0.03, 0.68, 741.8); break;
-        case 106684: make_resonance_plots(S("resonances/106684/"), event, lead, sublead, mgg, mgg_true, 300, 0.01, 0.045, 1052.0); break;
-        case 115557: make_resonance_plots(S("resonances/115557/"), event, lead, sublead, mgg, mgg_true, 700, 0.01, 0.089, 12.98); break;
-        case 115558: make_resonance_plots(S("resonances/115558/"), event, lead, sublead, mgg, mgg_true, 700, 0.03, 0.871, 116.3); break;
-        case 115559: make_resonance_plots(S("resonances/115559/"), event, lead, sublead, mgg, mgg_true, 800, 0.05, 2.79, 150.1); break;
-        case 115560: make_resonance_plots(S("resonances/115560/"), event, lead, sublead, mgg, mgg_true, 900, 0.03, 1.15, 26.94); break;
-        case 115561: make_resonance_plots(S("resonances/115561/"), event, lead, sublead, mgg, mgg_true, 900, 0.05, 2.98, 74.99); break;
-        case 115562: make_resonance_plots(S("resonances/115562/"), event, lead, sublead, mgg, mgg_true, 900, 0.07, 5.67, 142.8); break;
-        case 115563: make_resonance_plots(S("resonances/115563/"), event, lead, sublead, mgg, mgg_true, 900, 0.1, 12.06, 293.1); break;
-        case 115564: make_resonance_plots(S("resonances/115564/"), event, lead, sublead, mgg, mgg_true, 1100, 0.05, 3.75, 20.99); break;
-        case 115565: make_resonance_plots(S("resonances/115565/"), event, lead, sublead, mgg, mgg_true, 1100, 0.07, 7.44, 41.15); break;
-        case 115566: make_resonance_plots(S("resonances/115566/"), event, lead, sublead, mgg, mgg_true, 1100, 0.1, 14.93, 83.46); break;
-        case 115567: make_resonance_plots(S("resonances/115567/"), event, lead, sublead, mgg, mgg_true, 1100, 0.2, 57.6, 326.5); break;
-        case 115568: make_resonance_plots(S("resonances/115568/"), event, lead, sublead, mgg, mgg_true, 1500, 0.1, 8.23, 10.5); break;
-        case 115569: make_resonance_plots(S("resonances/115569/"), event, lead, sublead, mgg, mgg_true, 1250, 0.15, 37.3, 81.07); break;
-        case 115570: make_resonance_plots(S("resonances/115570/"), event, lead, sublead, mgg, mgg_true, 1250, 0.2, 65.2, 142.2); break;
-        case 119870: make_resonance_plots(S("resonances/119870/"), event, lead, sublead, mgg, mgg_true, 1750, 0.1, 26.46, 3.44); break;
-        case 119871: make_resonance_plots(S("resonances/119871/"), event, lead, sublead, mgg, mgg_true, 2000, 0.1, 30.24, 1.21); break;
-        case 119872: make_resonance_plots(S("resonances/119872/"), event, lead, sublead, mgg, mgg_true, 2250, 0.1, 34.02, 0.46); break;
-        
-        case 145536:
-        {
-            // Template sample
-            const int samples[] = {105324, 105623, 105833, 105834, 105835, 
-                105836, 105837, 105838, 105839, 105841, 106623, 106643, 106644,
-                106684, 115557, 115558, 115559, 115560, 115561, 115562, 115563, 
-                115564, 115565, 115566, 115567, 115568, 115569, 115570, 119870, 
-                119871, 119872};
-            foreach (const int&s, samples) {
-                // TODO(pwaller): Reweighting!
-                make_resonances_plots(s, event, lead, sublead, mgg, mgg_true);
-            }
-            break;
+    auto D = S("resonances/");
+    
+    if (_current_resonance) {
+        make_resonance_plots(D(_current_resonance->dirname),
+                             event, lead, sublead, mgg, mgg_true,
+                             _current_resonance);
+        return;
+    }
+    
+    const int template_sample_number = 145536;
+    if (number == template_sample_number) {
+        foreach (const auto& i, resonance_samples) {
+            const auto& sample = i.second;
+            auto sample_D = D(sample.dirname);
+            double weight = ComputeWeight(mgg_true / 1000, sample.mass, sample.km);
+            sample_D.mul_weight(weight);
+            // TODO(pwaller): Reweighting on sample_D!
+            make_resonance_plots(sample_D,
+                                 event, lead, sublead, mgg, mgg_true,
+                                 &sample);
         }
-        
-        default:
-            break;
     }
 }
 
+static const auto& bad_sample = resonance_samples.find(115570)->second;
+
 void Analysis::process(const ntup::Event& event) {
-    if (event.run_number() != _current_run || 
+
+
+    /*
+    _event_count++;
+
+    S.T<H1>("hist_", event.run_number())(1000, 0, 1000).fill(event.event_number() % 1000);
+    S.T<H1>("hist_total")(1000, 0, 1000).fill(event.event_number() % 1000);
+
+    return;
+    */
+
+    assert(metadata().mc_channel_size() == 1);
+    assert(metadata().mc_channel(0) == event.mc_channel_number());
+
+    if (event.run_number() != _current_run ||
         event.mc_channel_number() != _current_sample)
         new_sample(event);
     
@@ -223,7 +214,7 @@ void Analysis::process(const ntup::Event& event) {
     
     // MC: Pileup reweighting and run number reassignment
     float pileup_weight = 1.0;
-    if (!data && C._do_pileup_reweighting && !systematic("noprw")) {
+    if (!data && C._do_pileup_reweighting) {
         _pileup_tool->SetRandomSeed(event_number+1);
         pileup_weight = _pileup_tool->GetCombinedWeight(
             event.run_number(),
@@ -318,7 +309,7 @@ void Analysis::process(const ntup::Event& event) {
         if (index < 0) return NULL;
         const auto size = event.photon_truth_particles_size();
         if (index >= size) {
-            DEBUG("Requested skimmed photon :-( ", index, " ", reco_photon->pt(), " ", size);
+            //DEBUG("Requested skimmed photon :-( ", index, " ", reco_photon->pt(), " ", size);
             return NULL;
         }
         return &event.photon_truth_particles(index);
@@ -426,6 +417,20 @@ void Analysis::process(const ntup::Event& event) {
     CUT("10_iso", ph, !isolated(ph));
     
     const double mgg = compute_mass(event, lead, sublead);
+    
+    if (mgg/1000 >= 1552.9477056399128 && mgg/1000 < 1559.6798768763551) {
+        ntup::Event new_event;
+        new_event.set_run_number(event.run_number());
+        new_event.set_event_number(event.event_number());
+        
+        new_event.SetExtension(::ntup::EventExt::mgg, mgg);
+        const double w = ComputeWeight(mgg_true / 1000, bad_sample.mass, bad_sample.km);
+        new_event.SetExtension(::ntup::EventExt::weight_to_bad_sample, w);
+        write(new_event);
+    }
+    
+    return;
+    
     
     S.T<H1>("sel_reco_mgg")(7000, 0, 7e3, "m_{#gamma#gamma} [GeV]").fill(mgg / 1000);
     S.T<H1>("sel_reco_mgg_log")
@@ -568,6 +573,12 @@ double Analysis::resolution_plots(double mgg, double mgg_true) {
 
 
 int main(int argc, const char* argv[]) {
+    if (getenv("VALGRIND_STARTUP_PWD") == NULL) {
+        DEBUG("VALGRIND_STARTUP_PWD is NOT set");
+    } else {
+        DEBUG("VALGRIND_STARTUP_PWD is set");
+    }
+
     return a4::process::a4_main_configuration<ana::Configuration>(argc, argv);
 }
 

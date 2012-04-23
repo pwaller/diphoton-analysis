@@ -10,6 +10,7 @@ using a4::store::ObjectStore;
 #include <a4/processor.h>
 #include <a4/atlas/ntup/photon/Event.pb.h>
 #include <a4/atlas/Event.pb.h>
+#include <a4/atlas/EventMetaData.pb.h>
 
 #include "config.h"
 
@@ -77,7 +78,7 @@ public:
         ObjectStore D, const ntup::Event& event,
         const Photon& lead, const Photon& sublead,
         const double mgg, const double mgg_true,
-        double mass, double km, double width, double cross_section);
+        const ResonanceSample* resonance_sample);
     inline void make_resonances_plots(
         const uint32_t number,
         const ntup::Event& event,
