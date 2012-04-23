@@ -59,7 +59,7 @@ public:
           _current_resonance(NULL)
         
     {
-        set_metadata_behavior(MANUAL_BACKWARD);
+        //set_metadata_behavior(MANUAL_BACKWARD);
     }
     
     virtual void process(const ntup::Event& event);

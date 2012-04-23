@@ -82,6 +82,9 @@ VariableAxis mass_logbins       (VariableAxis::log_bins(53, low_mass_edge, 3000)
 VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 10, 3000));
 
 void Analysis::process_end_metadata() {
+    // Disabled for the time being because it is broken, producing cross-sample
+    // contamination.
+    return;
     auto m = metadata();
     auto& processing_step = *m.add_processing_steps();
     processing_step.set_name("pwanalysis");
