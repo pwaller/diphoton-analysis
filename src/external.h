@@ -20,4 +20,6 @@ double GetCorrectedInvMass(double Elead, double etaS1lead, double philead,
     double Esublead, double etaS1sublead, double phisublead, double PV_ID);
 double scaleForFFUncovertedPhoton(const double pT);
 
+double ComputeWeight(float truemass, float gravitonPoleMass, float Coupling);
+
 #endif

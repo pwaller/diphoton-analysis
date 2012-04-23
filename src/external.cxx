@@ -99,3 +99,36 @@ double scaleForFFUncovertedPhoton(const double pT)
     else if (pT<45.) return 0.98;
     else return 0.97;
 }
+
+
+//double ComputeWeight(double* x, double* params)
+double ComputeWeight(float truemass, float gravitonPoleMass=1000, float Coupling=0.1)
+{
+    //double truemass = x[0];
+    //double gravitonPoleMass = params[0], Coupling = params[1];    
+
+    Double_t gravitonPoleWidth = gravitonPoleMass*(pow((1.19555*Coupling),2)+(-1.12017e-04*Coupling)-5.51867e-06);
+
+    double gravitonScaleFactor = 1, gravitonExpFactor = 0;
+
+    if (truemass <= 550){
+      gravitonScaleFactor = 1;
+      gravitonExpFactor = -0.005882;
+    }
+    if ( (truemass > 550) && (truemass <= 1250) ){
+      gravitonScaleFactor = 0.2912;
+      gravitonExpFactor = -0.003457;
+    }
+    if (truemass > 1250){
+      gravitonScaleFactor = 0.0903;
+      gravitonExpFactor = -0.002411;
+    }
+
+    double gravitonWeight = 1.0/(pow((truemass*truemass-gravitonPoleMass*gravitonPoleMass),2)+(truemass*truemass*gravitonPoleWidth*gravitonPoleWidth));
+
+    gravitonWeight *= gravitonScaleFactor*exp(gravitonExpFactor*sqrt(truemass*truemass));
+
+    gravitonWeight *= (truemass*truemass*truemass*truemass)/(gravitonPoleMass*gravitonPoleMass*gravitonPoleMass*gravitonPoleMass);
+    
+    return gravitonWeight;
+}
