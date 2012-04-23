@@ -92,7 +92,7 @@ void Analysis::process_end_metadata() {
     metadata_end_block(m);
 }
 
-inline void Analysis::get_smdiph_weight(const double mass_gev, 
+inline void Analysis::get_smdiph_weight(const double mass_gev,
                                          double& w, double& err) {
     const auto bin = C._smdiph_reweight.FindBin(mass_gev);
     w = C._smdiph_reweight.GetBinContent(bin);
@@ -203,7 +203,7 @@ void Analysis::process(const ntup::Event& event) {
     
     S.set_weight(1);
 
-    if (event.run_number() != _current_run || 
+    if (event.run_number() != _current_run ||
         event.mc_channel_number() != _current_sample)
         new_sample(event);
         
@@ -223,8 +223,8 @@ void Analysis::process(const ntup::Event& event) {
     if (!data && C._do_pileup_reweighting && !systematic("noprw")) {
         _pileup_tool->SetRandomSeed(event_number+1);
         pileup_weight = _pileup_tool->GetCombinedWeight(
-            event.run_number(), 
-            event.mc_channel_number(), 
+            event.run_number(),
+            event.mc_channel_number(),
             event.averageintperxing());
         //pileup_tool->SetRandomSeed(314159 + event.mc_channel_number()*2718 + event_number);
         //run_number = pileup_tool->GetRandomRunNumber(run_number);
@@ -309,16 +309,16 @@ void Analysis::process(const ntup::Event& event) {
     // This is here so that we can get the single-photon reco-efficiency
     EFFPLOT_1("2_pv");
     
-    auto true_photon = [&](const ntup::Photon* reco_photon) 
-                        -> const ntup::PhotonTruthParticle* { 
+    auto true_photon = [&](const ntup::Photon* reco_photon)
+                        -> const ntup::PhotonTruthParticle* {
         const int index = reco_photon->truth_index();
         if (index < 0) return NULL;
         const auto size = event.photon_truth_particles_size();
         if (index >= size) {
             DEBUG("Requested skimmed photon :-( ", index, " ", reco_photon->pt(), " ", size);
             return NULL;
-        }   
-        return &event.photon_truth_particles(index); 
+        }
+        return &event.photon_truth_particles(index);
     };
     
     {
@@ -388,7 +388,7 @@ void Analysis::process(const ntup::Event& event) {
     CUT("6_oq", ph, ph->oq() & OQ_BAD_BITS);
     
     CUT("7_phclean", ph, ((ph->oq() & LARBITS_PHOTON_CLEANING) != 0
-                          && (ph->reta() > 0.98 
+                          && (ph->reta() > 0.98
                               || ph->rphi() > 1.0
                               || ((ph->oq() & LARBITS_OUTOFTIME_CLUSTER) != 0)
                             )
@@ -413,7 +413,7 @@ void Analysis::process(const ntup::Event& event) {
     
     //plot_boson(S("2_tight/"), *lead, *sublead);
     
-    auto isolated = [&](const Photon& ph) { 
+    auto isolated = [&](const Photon& ph) {
         return ph.corrected().analysis_isolation() < 5000.;
     };
     
@@ -448,7 +448,7 @@ void Analysis::process(const ntup::Event& event) {
         
     EFFPLOT_1("11_mass");
     
-    make_resonances_plots(event.mc_channel_number(), event, 
+    make_resonances_plots(event.mc_channel_number(), event,
                           lead, sublead, mgg, mgg_true);
 }
 
@@ -460,7 +460,7 @@ void Analysis::new_sample(const ntup::Event& event) {
     _current_resonance = get_resonance(event);
     
     switch (_current_sample) {
-        // Samples: 
+        // Samples:
         //       JF:    PhotonJet:           DP:
         case 105802: case 108087: case 115802:
             _should_ptcut = true; _pt_low = 20000; _pt_high = 45000;
