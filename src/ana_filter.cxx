@@ -68,6 +68,19 @@ void Filter::filter_photons(const ntup::Event& event, ntup::Event& new_event) {
                 photon_ef_to_keep[new_ph.ef_index()] = &new_ph;
         }
     }
+    
+    auto interesting_true_ph = [](const ntup::PhotonTruthParticle& ph) {
+        return ph.pdgid() == 5000039 || 
+               ph.ishardprocphoton() ||
+               ph.pt() > 20e3;
+    };
+    
+    // Get the parent barcodes of interesting particles
+    std::unordered_set<uint32_t> interesting_parents;
+    foreach (auto& ph, event.photon_truth_particles())
+        if (interesting_true_ph(ph))
+            foreach (auto& parent, ph.parents())
+                interesting_parents.insert(parent);
             
     // Keep photons from the hard process or which are matched to 
     // reconstructed photons we kept.
@@ -75,10 +88,8 @@ void Filter::filter_photons(const ntup::Event& event, ntup::Event& new_event) {
     FILTER(old_index, const ntup::PhotonTruthParticle& ph, photon_truth_particles) {
         
         bool has_kept_reconstruction = in_map(photon_truth_to_keep, old_index);
-        bool interesting = 
-            ph.pdgid() == 5000039 || 
-            ph.ishardprocphoton() ||
-            ph.pt() > 20e3;
+        bool interesting = interesting_true_ph(ph)
+                           || interesting_parents.count(ph.barcode());
         
         if (has_kept_reconstruction || interesting) {
         
