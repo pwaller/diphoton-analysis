@@ -1,18 +1,19 @@
 package a4.atlas.ntup.photon;
 
+import "a4/root/RootExtension.proto";
+
 import "a4/atlas/ntup/photon/Event.proto";
 import "a4/atlas/ntup/photon/Photon.proto";
 
 message EventExt {
   extend Event {
-    optional double mgg = 100000;
-    optional double weight_to_bad_sample = 100001;
+    optional double mgg = 100000 [(root_branch)="mgg"];
   }
 }
 
 message PhotonExt {
   extend Photon {
-    optional Photon corrected = 100000;
+    optional Photon corrected = 100000 [(root_prefix)="corr"];
   }
 }
 
