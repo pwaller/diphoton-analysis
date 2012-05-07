@@ -51,7 +51,8 @@ def configure(conf):
     
     conf.check_cfg(path="root-config", package="", uselib_store="CERN_ROOT_SYSTEM",
                    args='--libs --cflags', mandatory=False)
-                   
+    conf.env.RPATH_CERN_ROOT_SYSTEM = conf.env.LIBPATH_CERN_ROOT_SYSTEM
+    
     conf.to_log("Final environment:")
     conf.to_log(conf.env)
 
