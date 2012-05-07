@@ -42,7 +42,8 @@ public:
 class Photon : public PersistentWrapper<Photon, ntup::Photon> {
 private:
     shared<ntup::Photon> _corrected;
-        
+    mutable shared<ALorentzVector> _lv;
+    
 public:
     Photon() { init(); }
     explicit Photon(ntup::Photon const& ph) : PersistentWrapper<Photon, ntup::Photon>(ph) { init(); }
@@ -237,6 +238,12 @@ public:
         if (!_corrected)
             FATAL("Corrections used before compute_corrections(ntup::Event) called");
         return *_corrected;
+    }
+    
+    const ALorentzVector& lv() const {
+        if (!_lv)
+            _lv.reset(new ALorentzVector(ALorentzVector::from_ptetaphie(**this)));
+        return *_lv;
     }
 };
 

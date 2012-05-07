@@ -16,6 +16,8 @@ using a4::store::ObjectStore;
 
 class Photon;
 
+class ALorentzVector;
+
 namespace ana {
 
 
@@ -85,6 +87,7 @@ public:
         const Photon& lead, const Photon& sublead,
         const double mgg, const double mgg_true);
 
+    void plot_cts(ObjectStore D, const ALorentzVector& v1, const ALorentzVector& v2) const;
 };
 
 class Filter : public Analysis {

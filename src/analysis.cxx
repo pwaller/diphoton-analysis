@@ -7,11 +7,14 @@
 #include <a4/application.h>
 using a4::store::ObjectStore;
 
+#include <a4/alorentzvector.h>
+
 #include <a4/histogram.h>
 using a4::hist::H1;
 using a4::hist::H2;
 using a4::hist::Cutflow;
 #include <a4/axis.h>
+using a4::hist::SimpleAxis;
 using a4::hist::VariableAxis;
 
 #include <a4/utility.h>
@@ -32,6 +35,18 @@ namespace ntup = a4::atlas::ntup::photon;
 
 namespace ana {
 
+
+
+// Why!?
+// Gives 10^-12 compatibility with reducible template
+const double low_mass_edge = 409.40104882461151;
+VariableAxis mass_logbins       (VariableAxis::log_bins(53, low_mass_edge, 3000));
+VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 10, 3000));
+
+VariableAxis pt_logbins         (VariableAxis::log_bins(100, 10, 2000));
+VariableAxis bjorken_x_bins     (VariableAxis::log_bins(50,  0.01,  1));
+
+SimpleAxis   eta_bins(100, -2.5, 2.5);
 
 const std::unordered_map<int, ResonanceSample> resonance_samples = {
     { 105324, {105324, "105324/", 1250, 0.05, 4.725, 9.08 } },
@@ -76,12 +91,6 @@ const ResonanceSample* get_resonance(const ntup::Event& e) {
     return NULL;
 }
 
-// Why!?
-// Gives 10^-12 compatibility with reducible template
-const double low_mass_edge = 409.40104882461151;
-VariableAxis mass_logbins       (VariableAxis::log_bins(53, low_mass_edge, 3000));
-VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 10, 3000));
-
 void Analysis::process_end_metadata() {
     // Disabled for the time being because it is broken, producing cross-sample
     // contamination.
@@ -119,6 +128,20 @@ inline void Analysis::make_resonance_plots(
     D.T<H1>("mgg")     (100, mass - resol_width*5, mass + resol_width*5, "m_{#gamma#gamma} [GeV]").fill(mgg / 1000);
     D.T<H1>("mgg_true")(100, mass - width*5,       mass + width*5      , "m_{#gamma#gamma} [GeV]").fill(mgg_true / 1000);
     
+    plot_cts(D, lead.lv(), sublead.lv());
+             
+    const auto& clead = lead.corrected(),   
+                 csublead = sublead.corrected();
+    
+    D.T<H1>("1_pt").with_axis(pt_logbins, "p_{T} [GeV] (leading)")    .fill(clead.pt()    / 1000);
+    D.T<H1>("2_pt").with_axis(pt_logbins, "p_{T} [GeV] (subleading)") .fill(csublead.pt() / 1000);
+    
+    D.T<H1>("1_eta").with_axis(eta_bins, "#eta (leading)")    .fill(lead->eta());
+    D.T<H1>("2_eta").with_axis(eta_bins, "#eta (subleading)") .fill(sublead->eta());
+    
+    //D.T<H1>("1_iso")(120, -5, 25, "Isolation [GeV] (leading)")   .fill(clead.analysis_isolation() / 1000);
+    //D.T<H1>("2_iso")(120, -5, 25, "Isolation [GeV] (subleading)").fill(csublead.analysis_isolation() / 1000);
+    
 }
 
 inline void Analysis::make_resonances_plots(
@@ -141,9 +164,10 @@ inline void Analysis::make_resonances_plots(
         foreach (const auto& i, resonance_samples) {
             const auto& sample = i.second;
             auto sample_D = D(sample.dirname);
+            
             double weight = ComputeWeight(mgg_true / 1000, sample.mass, sample.km);
             sample_D.mul_weight(weight);
-            // TODO(pwaller): Reweighting on sample_D!
+            
             make_resonance_plots(sample_D,
                                  event, lead, sublead, mgg, mgg_true,
                                  &sample);
@@ -151,22 +175,41 @@ inline void Analysis::make_resonances_plots(
     }
 }
 
-static const auto& bad_sample = resonance_samples.find(115570)->second;
+void Analysis::plot_cts(ObjectStore D, const ALorentzVector& v1, const ALorentzVector& v2) const {
+    
+    const auto v0 = v1 + v2;
+    
+    // Collins soper boost
+    auto P1p = v1.E + v1.pz,
+         P1m = v1.E - v1.pz,
+         P2p = v2.E + v2.pz,
+         P2m =  v2.E - v2.pz;
+    
+    auto Q = v0.m(),
+         Q2 = v0.m2(),
+         Qt2 = v0.pt2();
+    
+    auto cts_CS = -( P1p * P2m - P1m * P2p ) / ( Q * sqrt(Q2 + Qt2) );
+    
+    // Equal theta boost
+    auto cts_theta = tanh( (v1.eta() - v2.eta()) / 2 );
+    
+    D.T<H1>("cts_cs")   (100, -1, 1, "cos(#theta^{*})_{CS}")   .fill(cts_CS);
+    D.T<H1>("cts_theta")(100, -1, 1, "cos(#theta^{*})_{theta}").fill(cts_theta);
+    
+    // TODO: xmax, quark part?
+    //
+    //Ggg1TeV.SetAlias("nbar", "(SBT_decayPair_eta[1]+SBT_decayPair_eta[2])/2")
+    //Ggg1TeV.SetAlias("xmax", "0.1*exp(abs(nbar))")
+}
 
 void Analysis::process(const ntup::Event& event) {
 
-
-    /*
-    _event_count++;
-
-    S.T<H1>("hist_", event.run_number())(1000, 0, 1000).fill(event.event_number() % 1000);
-    S.T<H1>("hist_total")(1000, 0, 1000).fill(event.event_number() % 1000);
-
-    return;
-    */
-
     assert(metadata().mc_channel_size() == 1);
-    assert(metadata().mc_channel(0) == event.mc_channel_number());
+    if (unlikely(metadata().mc_channel(0) != event.mc_channel_number())) {
+        FATAL("Channel numbers don't match: ", metadata().mc_channel(0), " - ", 
+              event.mc_channel_number());
+    }
 
     if (event.run_number() != _current_run ||
         event.mc_channel_number() != _current_sample)
@@ -246,11 +289,25 @@ void Analysis::process(const ntup::Event& event) {
         phtr_2_lv = ALorentzVector::from_ptetaphim(*phtr_2);
     }
     
+    bool have_parents = false, is_gluon_event = false;
+    
     auto gravitons = vector_of_ptr(event.photon_truth_particles());
     REMOVE_IF(gravitons, ph, ph->pdgid() != 5000039);
     double mgg_true = -999;
-    if (gravitons.size())
+    if (gravitons.size()) {
         mgg_true = gravitons[0]->m();
+        foreach (auto& g, gravitons) {
+            if (g->parents_size() == 1) continue;
+            foreach (auto& parent, g->parents()) {
+                foreach (auto& ph_truth, event.photon_truth_particles()) {
+                    if (ph_truth.barcode() == parent) {
+                        have_parents = true;
+                        is_gluon_event = ph_truth.pdgid() == PDGID_GLUON;
+                    }
+                }
+            }
+        }
+    }
     else if (is_mc && hard_process_photons.size() >= 2) {
         mgg_true = (phtr_1_lv + phtr_2_lv).m();
     }
@@ -418,20 +475,6 @@ void Analysis::process(const ntup::Event& event) {
     
     const double mgg = compute_mass(event, lead, sublead);
     
-    if (mgg/1000 >= 1552.9477056399128 && mgg/1000 < 1559.6798768763551) {
-        ntup::Event new_event;
-        new_event.set_run_number(event.run_number());
-        new_event.set_event_number(event.event_number());
-        
-        new_event.SetExtension(::ntup::EventExt::mgg, mgg);
-        const double w = ComputeWeight(mgg_true / 1000, bad_sample.mass, bad_sample.km);
-        new_event.SetExtension(::ntup::EventExt::weight_to_bad_sample, w);
-        write(new_event);
-    }
-    
-    return;
-    
-    
     S.T<H1>("sel_reco_mgg")(7000, 0, 7e3, "m_{#gamma#gamma} [GeV]").fill(mgg / 1000);
     S.T<H1>("sel_reco_mgg_log")
         .with_axis(mass_logbins, "m_{#gamma#gamma} [GeV]")
@@ -458,6 +501,35 @@ void Analysis::process(const ntup::Event& event) {
     
     make_resonances_plots(event.mc_channel_number(), event,
                           lead, sublead, mgg, mgg_true);
+    
+    plot_cts(S("sel_reco_"), lead.lv(), sublead.lv());
+
+    auto plot_gen_x = [](const ntup::Event& event, ObjectStore D) {
+        
+        const auto& gen_event = event.gen_events(0);
+        
+        D.T<H2>("true_x")
+            .with_axis(bjorken_x_bins, "x_{1}")
+            .with_axis(bjorken_x_bins, "x_{2}")
+            .fill(gen_event.pdf_x1(), gen_event.pdf_x2());
+        
+        auto xmin = gen_event.pdf_x1(), xmax = gen_event.pdf_x2();
+        if (xmin > xmax) std::swap(xmin, xmax);
+        D.T<H1>("true_xmin").with_axis(bjorken_x_bins, "x_{min}").fill(xmin);
+        D.T<H1>("true_xmax").with_axis(bjorken_x_bins, "x_{max}").fill(xmax);
+    };
+
+    if (is_mc) {
+        plot_cts(S("sel_true_"), phtr_1_lv, phtr_2_lv);
+        plot_gen_x(event, S);
+        if (have_parents) {
+            auto D = S(is_gluon_event ? "gluon/" : "quark/");
+            plot_cts(D("sel_true_"), phtr_1_lv, phtr_2_lv);
+            plot_cts(D("sel_reco_"), lead.lv(), sublead.lv());
+            plot_gen_x(event, D);
+        }
+    }
+    
 }
 
 void Analysis::new_sample(const ntup::Event& event) {

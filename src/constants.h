@@ -16,3 +16,4 @@ const uint32_t OQ_BAD_BITS = 0x00085a6;
 
 const uint32_t nontight_mask = 0x45fc01;
 
+const uint32_t PDGID_GLUON = 21;
