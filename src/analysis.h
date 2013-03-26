@@ -26,11 +26,18 @@ class Configuration;
 using a4::process::ProcessorOf;
 namespace ntup = a4::atlas::ntup::photon;
 
-class ResonanceSample {
+class SampleInfo {
 public:
     int ds_number;
     const char* dirname;
-    double mass, km, width, xs;
+    double mass, km, 
+        width, // GeV
+        xs; // femtobarn (fb)
+    uint64_t nev; // Number
+    
+    double effective_lumi() const {
+        return double(nev) / xs;
+    }
 };
 
 class Analysis : public ProcessorOf<ntup::Event, a4::atlas::EventMetaData> {
@@ -48,7 +55,7 @@ protected:
     double _sum_mc_weights;
     uint64_t _event_count;
     
-    const ResonanceSample* _current_resonance;
+    const SampleInfo* _current_resonance;
     
 public:
     static Analysis* construct(const std::string& name, Configuration* c);
@@ -80,7 +87,7 @@ public:
         ObjectStore D, const ntup::Event& event,
         const Photon& lead, const Photon& sublead,
         const double mgg, const double mgg_true,
-        const ResonanceSample* resonance_sample);
+        const SampleInfo* resonance_sample);
     inline void make_resonances_plots(
         const uint32_t number,
         const ntup::Event& event,

@@ -30,6 +30,15 @@ namespace ana {
 
 void Filter::process(const ntup::Event& event) {
     ntup::Event new_event(event);
+    
+    // Discard everything except the first gen_event
+    new_event.clear_gen_events();
+    new_event.add_gen_events()->CopyFrom(event.gen_events(0));
+    
+    // Discard everything except the first primary vertex
+    new_event.clear_primary_vertices();
+    new_event.add_primary_vertices()->CopyFrom(event.primary_vertices(0));
+    
     filter_photons(event, new_event);
     write(new_event);
 }

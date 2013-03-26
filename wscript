@@ -34,16 +34,21 @@ def configure(conf):
     conf.load('compiler_c compiler_cxx python')
     conf.load('proto check_with compiler_magic', tooldir="./common/waf")
     
-    conf.check_with(conf.check_cfg, "a4", package="a4", args="--cflags --libs")
+    conf.check_with(conf.check_cfg, "a4", package="a4", args="--static --cflags --libs")
     
     #conf.check_cfg(package="a4", uselib_store="A4", args="--libs --cflags")
-    conf.env.RPATH_A4 = conf.env.LIBPATH_A4
-    conf.env.LIB_A4.insert(0, "a4atlas")
+    #conf.env.RPATH_A4 = conf.env.LIBPATH_A4
+    ##conf.env.LIB_A4.insert(0, "a4atlas")
     #conf.env.STLIB_A4.insert(0, "a4atlas")
     #conf.env.STLIB_A4.insert(0, "c")
     #conf.env.STLIB_A4.append("rt")
     #conf.env.STLIB_A4.append("dl")
     #conf.env.STLIB_A4.append("c")
+    conf.check(features='cxx cxxprogram', lib="rt", uselib_store="A4")
+    
+    conf.env.STLIB_A4.remove("z")
+    conf.env.STLIB_A4.remove("pthread")
+    conf.env.append_value("STLIB_A4", ["a4atlas", "a4root"])
     
     conf.env.append_value("CXXFLAGS", ["-std=c++0x", "-ggdb"])
     conf.env.append_value("LDFLAGS", ["-Wl,--as-needed"])

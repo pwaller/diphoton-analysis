@@ -1,4 +1,4 @@
-package a4.atlas.ntup.photon;
+package ana;
 
 import "a4/root/RootExtension.proto";
 
@@ -6,14 +6,26 @@ import "a4/atlas/ntup/photon/Event.proto";
 import "a4/atlas/ntup/photon/Photon.proto";
 
 message EventExt {
-  extend Event {
+  extend a4.atlas.ntup.photon.Event {
     optional double mgg = 100000 [(root_branch)="mgg"];
+    
+    optional double weight          = 100010 [(root_branch)="w"]; // Event weight
+    optional double xsweight        = 100011 [(root_branch)="wxs"]; // Cross section weighting to target luminosity
+    optional double pileup_weight   = 100012 [(root_branch)="wpu"]; // Pileup weight
+    optional double k_factor        = 100013 [(root_branch)="w_kfac"]; // k-factor
+    optional double k_factor_err    = 100014 [(root_branch)="w_kfac_err"]; // k-factor error
+    
+    repeated sint32 chan = 100100 [(root_branch)="chan"];
+    
+    optional a4.atlas.ntup.photon.Event truth = 101000 [(root_prefix)="true_"];
   }
 }
 
 message PhotonExt {
-  extend Photon {
-    optional Photon corrected = 100000 [(root_prefix)="corr"];
+  extend a4.atlas.ntup.photon.Photon {
+    //optional a4.atlas.ntup.photon.Photon corrected = 100000 [(root_prefix)="corr"];
+    
+    optional bool signal = 101000 [(root_branch)="signal"];
   }
 }
 

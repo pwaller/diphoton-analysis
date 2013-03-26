@@ -211,7 +211,30 @@ public:
         ph.set_analysis_isolation(isolation);
         
     }
+    
+    // i is the i'th systematic variation in the relaxed_isem.
+    bool Q(unsigned int i) {
+        auto& ph = *_corrected;
+        if (ph.tight())
+            return 0;
+        if (relaxed_isem(i))
+            return 1;
+        if (ph.loose())
+            return 2;
+        return 3;
+    }
+    
+    bool relaxed_isem(unsigned int i) {
+        const static unsigned int definition[] = {
+            0x04fc01, // From paper loose' 4
+            0x26fc01, // From paper loose' 2
+            0x24fc01, // From paper loose' 3
+            0x00fc01, // From paper loose' 5
+        };
         
+        return 0 == (corrected().isem() & definition[i]);
+    }
+    
     bool isolated() {
         return corrected().analysis_isolation() < 5000;
     }
@@ -238,6 +261,11 @@ public:
         if (!_corrected)
             FATAL("Corrections used before compute_corrections(ntup::Event) called");
         return *_corrected;
+    }
+    
+    const bool signal() const {
+        auto& ph = **this;
+        return ph.truth_mothertype() == 22 || ph.truth_mothertype() == 5000039;
     }
     
     const ALorentzVector& lv() const {

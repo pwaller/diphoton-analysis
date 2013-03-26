@@ -31,11 +31,14 @@ public:
          _write_anatree,
          _filter_reco_photons;
          
+    double _target_lumi;
+         
     TH1D _smdiph_reweight;
 
     virtual void add_options(po::options_description_easy_init opt) {
         opt("grl", po::value(&_grl_name), "GRL file");
         opt("processor,P", po::value(&_processor)->default_value("Analysis"), "Processor");
+        opt("target-lumi,L", po::value(&_target_lumi)->default_value(4.91), "Target luminosity for reweighting");
         opt("pileup-mc", po::value<std::string>(&_pileup_mc_file)->default_value("pileup_reweighting.root"), "File with MC distributions for Pileup reweighting");
         opt("pileup-data", po::value<std::string>(&_pileup_data_file)->default_value("pileup_data.root"), "File with data distributions for Pileup reweighting");
         opt("rw-pileup", po::bool_switch(&_do_pileup_reweighting)->default_value(false), "Reweight Pileup");

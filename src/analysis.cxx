@@ -12,6 +12,7 @@ using a4::store::ObjectStore;
 #include <a4/histogram.h>
 using a4::hist::H1;
 using a4::hist::H2;
+using a4::hist::H3;
 using a4::hist::Cutflow;
 #include <a4/axis.h>
 using a4::hist::SimpleAxis;
@@ -24,6 +25,7 @@ using a4::process::utility::in_map;
 #include "analysis.h"
 #include "config.h"
 
+#include "egammaPIDdefs.h"
 #include "constants.h"
 #include "event_view.h"
 
@@ -43,12 +45,25 @@ const double low_mass_edge = 409.40104882461151;
 VariableAxis mass_logbins       (VariableAxis::log_bins(53, low_mass_edge, 3000));
 VariableAxis mass_logbins_full  (VariableAxis::log_bins(200, 10, 3000));
 
+
+
+VariableAxis _ptbins = VariableAxis({
+    //20, 40, 80, 160, 320, 640, 1280
+    0, 100, 250, 500, 750, 1000, 1500, 2000
+}); 
+
+VariableAxis _etabins = VariableAxis({
+    //0., 0.60, 1.37, 1.52, 1.81, 2.37
+    0, 0.6, 0.8, 1.15, 1.37, 1.52, 1.81, 2.01, 2.37, 2.47
+});
+
+
 VariableAxis pt_logbins         (VariableAxis::log_bins(100, 10, 2000));
 VariableAxis bjorken_x_bins     (VariableAxis::log_bins(50,  0.01,  1));
 
 SimpleAxis   eta_bins(100, -2.5, 2.5);
 
-const std::unordered_map<int, ResonanceSample> resonance_samples = {
+const std::unordered_map<int, SampleInfo> resonance_samples = {
     { 105324, {105324, "105324/", 1250, 0.05, 4.725, 9.08 } },
     { 105623, {105623, "105623/", 500, 0.01, 0.075, 82.5 } },
     { 105833, {105833, "105833/", 800, 0.03, 1.088, 54.4 } },
@@ -81,9 +96,15 @@ const std::unordered_map<int, ResonanceSample> resonance_samples = {
     { 119870, {119870, "119870/", 1750, 0.1, 26.46, 3.44 } },
     { 119871, {119871, "119871/", 2000, 0.1, 30.24, 1.21 } },
     { 119872, {119872, "119872/", 2250, 0.1, 34.02, 0.46 } },
+    
+    // SM DiPhoton
+    { 105964, {105964, "105964/", 0, 0, 0, 114937, 500000 } }, // Ecm < 200 GeV
+    { 119584, {119584, "119584/", 0, 0, 0,   1394, 200000 } }, //  <= Ecm < 800
+    { 145606, {145606, "145606/", 0, 0, 0,   8.72,  80000 } }, // 800 <= Ecm < 1500
+    { 145607, {145607, "145607/", 0, 0, 0,   0.33,  20000 } }, // Ecm >= 1500 GeV
 };
 
-const ResonanceSample* get_resonance(const ntup::Event& e) {
+const SampleInfo* get_sample(const ntup::Event& e) {
     if (e.has_mc_channel_number() == 0) return NULL;
     const auto& i = resonance_samples.find(e.mc_channel_number());
     if (i != resonance_samples.end())
@@ -117,7 +138,7 @@ inline void Analysis::make_resonance_plots(
     ObjectStore D, const ntup::Event& event,
     const Photon& lead, const Photon& sublead,
     const double mgg, const double mgg_true,
-    const ResonanceSample* resonance)
+    const SampleInfo* resonance)
 {
     const double mass = resonance->mass,
                   width = resonance->width;
@@ -172,6 +193,14 @@ inline void Analysis::make_resonances_plots(
                                  event, lead, sublead, mgg, mgg_true,
                                  &sample);
         }
+        
+        double lo = 400, hi = 3000;
+        int n = 200;
+        for (double mass = lo; mass < hi; mass += (hi-lo)/n) {
+            auto D_weighted = S("limit/mgg_");
+            D_weighted.mul_weight(ComputeWeight(mgg_true / 1000, mass, 0.1));
+            D_weighted.T<H1>(mass).with_axis(mass_logbins, "m_{#gamma#gamma} [GeV]").fill(mgg / 1000);
+        }
     }
 }
 
@@ -202,14 +231,138 @@ void Analysis::plot_cts(ObjectStore D, const ALorentzVector& v1, const ALorentzV
     //Ggg1TeV.SetAlias("nbar", "(SBT_decayPair_eta[1]+SBT_decayPair_eta[2])/2")
     //Ggg1TeV.SetAlias("xmax", "0.1*exp(abs(nbar))")
 }
+        
+template<class Obj>
+void plot_showershapes(ObjectStore D, const Obj& obj) {
+//#define PTETABINS (10, 0, 0.5e6, "p_{T} [GeV]")(10, 0, 2.37, "#eta")
+#define PTETABINS .with_axis(_ptbins, "p_{T} [GeV]").with_axis(_etabins, "#eta_{second layer}")
+#define SS(name, bins, value) \
+{ \
+    D.T<H3>(name)bins PTETABINS .fill((value), obj.pt() / 1000, fabs(obj.etas2())); \
+    if (bit != -1) \
+    { \
+        const unsigned int cut_mask = 1 << bit; \
+        if (obj.isem() & cut_mask) \
+            D.T<H3>("fail/" name)bins PTETABINS .fill((value), obj.pt() / 1000, fabs(obj.etas2())); \
+        else \
+            D.T<H3>("pass/" name)bins PTETABINS .fill((value), obj.pt() / 1000, fabs(obj.etas2())); \
+    } \
+    bit = -1; \
+}
+    
+    D = D("showershapes/");
+    
+    int bit = -1;
+    ////
+    // "HADRONIC"
+    ////
+    
+    SS("Ethad",                          ( 100,      -5000.0,       250000.0, "E_{T} had [MeV]"), obj.ethad());
+    SS("Ethad1",                         ( 100,      -4000.0,       160000.0, "E_{T} had (1st layer) [MeV]"), obj.ethad1());
+    
+    bit = egammaPID::ClusterHadronicLeakage_Photon;
+    SS("Rhad",  (120, -0.1, 0.75, "R_{had}"), obj.rhad());
+    
+    bit = egammaPID::ClusterHadronicLeakage_Photon;
+    SS("Rhad1", (120, -0.01,  0.1, "R_{had} (1st layer)"),  obj.rhad1());
+    
+    ////
+    // "MIDDLE"
+    ////
+    
+    // E237 / E277
+    bit = egammaPID::ClusterMiddleEratio37_Photon;
+    SS("reta",                           (120, 0.9,     1, "R_{#eta}"),  obj.reta());
+    
+    // E233 / E237
+    bit =  egammaPID::ClusterMiddleEratio33_Photon;
+    SS("rphi",                           (120, 0.8,     1, "R_{#phi}"),  obj.rphi());
+    
+    // Width in second sampling
+    bit = egammaPID::ClusterMiddleWidth_Photon;
+    SS("weta2",                          ( 100,        -0.01,           0.06, "w_{#eta} (2nd sampling)"), obj.weta2());
+    
+    ////
+    // "STRIPS"
+    ////
+    
+    // eratio AKA DEmaxs1
+    bit = egammaPID::ClusterStripsDEmaxs1_Photon;
+    SS("Eratio",                         (120, 0.7, 1, "E_{ratio}"), obj.deltae());
+    
+    // Difference of energy between max and min
+    bit = egammaPID::ClusterStripsDeltaE_Photon;
+    SS("DeltaE",                         (60, 0, 500, "#DeltaE [MeV]"), obj.deltae());
+    
+    // E of 2nd max in 1st sampling ~e2tsts1/(1000+const_lumi*et)
+    // AKA: Rmax
+    // Unused in current LowLumi_Photons menu
+    bit =  egammaPID::ClusterStripsDeltaEmax2_Photon;
+    SS("deltaEmax2",                     ( 100,            0,           4.0, "#DeltaE_{max}"), obj.deltaemax2());
+    
+    // "fraction of energy reconstructed in strips"
+    bit = egammaPID::ClusterStripsEratio_Photon;
+    SS("f1",                             ( 100,         -0.05,            0.85, "f_{1}"), obj.f1());
+    SS("f1core",                         ( 100,        -0,            0.6, "f_{1} (core)"), obj.f1core());
+    SS("f3core",                         ( 100,         0,            1.0, "f_{3} (core)"), obj.f3core());
+    
+    //
+    // AKA: fracm
+    bit = egammaPID::ClusterStripsFracm_Photon;
+    SS("fside",                          ( 100,         -0.1,           2.0, "f_{side}"), obj.fside());
+    
+    // "Width in 3 strips"
+    // AKA: weta1/weta1c/w1
+    bit = egammaPID::ClusterStripsWeta1c_Photon;
+    SS("ws3",                            ( 100,            0,           0.85, "w_{#eta} (1st sampling)"), obj.ws3());
+    
+    // "Total width in strips"
+    bit = egammaPID::ClusterStripsWtot_Photon;
+    SS("wstot",                          ( 100,         0.04,           20.0, "w_{total} "), obj.wstot());
+    
+    ////
+    // "OTHER"
+    ////
+    
+    // SS("E033",                        (   1,            0,              0), obj.e033());
+    // SS("E132",                        (   1,            0,              0), obj.e132());
+    // SS("E1152",                       (   1,            0,              0), obj.e1152());
+    
+    // Energy of minimum in shower
+    SS("Emins1",                         ( 100,      -500.0,        5000.0, "E_{min} [MeV]"), obj.emins1());
+    
+    // Finds its way into deltae
+    // First maximum
+    SS("Emaxs1",                         ( 100,            0,       110000.0, "E_{max} [MeV]"), obj.emaxs1());
+    
+    // Finds its way into deltaEmaxs2
+    // Energy of second maximum between max and min in strips
+    SS("Emax2",                          ( 100,            0,        151000.0, "E_{second max} [MeV]"), obj.emax2());
+    
+    // (e2tsts1 - emins1)
+    SS("deltaEs",                        ( 100,       -500.0,        5000.0, "#DeltaE_{s} [MeV]"), obj.deltaes());
+    
+    SS("E233",                           ( 100,      -5000.0,       900000.0, "E233 [MeV]"), obj.e233());
+    SS("E237",                           ( 100,     -15000.0,       900000.0, "E237 [MeV]"), obj.e237());
+    SS("E277",                           ( 100,     -28000.0,      1000000.0, "E277 [MeV]"), obj.e277());
+    
+    
+    // SS("f3",                          (   1,            0,              0), obj.f3());
+    
+    
+    // missing variable (not on D3PD: fracm)
+#undef SS
+}
 
 void Analysis::process(const ntup::Event& event) {
 
+    /*
     assert(metadata().mc_channel_size() == 1);
     if (unlikely(metadata().mc_channel(0) != event.mc_channel_number())) {
         FATAL("Channel numbers don't match: ", metadata().mc_channel(0), " - ", 
               event.mc_channel_number());
     }
+    */
 
     if (event.run_number() != _current_run ||
         event.mc_channel_number() != _current_sample)
@@ -312,9 +465,12 @@ void Analysis::process(const ntup::Event& event) {
         mgg_true = (phtr_1_lv + phtr_2_lv).m();
     }
     
+    double k_factor = 0, k_factor_err = 0;
+    
     if (_is_sm_diphoton_sample) {
         double w = 1, err = 0;
         get_smdiph_weight(mgg_true / 1000., w, err);
+        k_factor = w; k_factor_err = err;
         if (systematic("kfac_up"))
             w += err;
         else if (systematic("kfac_down"))
@@ -445,10 +601,53 @@ void Analysis::process(const ntup::Event& event) {
                             )
                          ));
     
-    CUT("8_loose", ph, !ph.corrected().loose());
-            
     SORT_KEY (good_photons, ph, -ph.corrected().pt());
     auto lead = good_photons[0], sublead = good_photons[1];
+    
+    double mgg = compute_mass(event, lead, sublead);
+        
+    if (C._write_anatree && rerun_systematics_current == NULL) {
+        ntup::Event this_event;
+        
+        #define COPY(what) if (event.has_##what()) this_event.set_##what(event.what())
+        COPY(run_number);
+        COPY(event_number);
+        #undef COPY
+        
+        this_event.SetExtension(EventExt::mgg, mgg);
+        
+        if (is_mc) {
+            ntup::Event* truth = this_event.MutableExtension(EventExt::truth);
+
+            truth->SetExtension(EventExt::mgg, mgg_true);
+            truth->SetExtension(EventExt::weight, event.mc_event_weight());
+            
+            truth->SetExtension(EventExt::xsweight, C._target_lumi / _current_resonance->effective_lumi());
+            truth->SetExtension(EventExt::pileup_weight, pileup_weight);
+            truth->SetExtension(EventExt::k_factor, k_factor);
+            truth->SetExtension(EventExt::k_factor_err, k_factor_err);
+            
+        }
+        
+        for (int i = 0; i < 4; i++)
+            this_event.AddExtension(EventExt::chan, lead.Q(i) << 2 | sublead.Q(i) << 0);
+        
+        auto *ph = this_event.add_photons();
+        ph->CopyFrom(lead.corrected());
+        if (is_mc) ph->SetExtension(PhotonExt::signal, lead.signal());
+            
+        ph = this_event.add_photons();
+        ph->CopyFrom(sublead.corrected());
+        if (is_mc) ph->SetExtension(PhotonExt::signal, sublead.signal());
+        
+        write(this_event);
+    }
+    
+    CUT("8_loose", ph, !ph.corrected().loose());
+    
+    // Choose new leading/subleading since we did another cut        
+    lead = good_photons[0];
+    sublead = good_photons[1];
     
     if (is_mc && C._do_sf_reweighting) {
         S.mul_weight(lead.scale_factor());
@@ -473,7 +672,7 @@ void Analysis::process(const ntup::Event& event) {
     
     CUT("10_iso", ph, !isolated(ph));
     
-    const double mgg = compute_mass(event, lead, sublead);
+    mgg = compute_mass(event, lead, sublead);
     
     S.T<H1>("sel_reco_mgg")(7000, 0, 7e3, "m_{#gamma#gamma} [GeV]").fill(mgg / 1000);
     S.T<H1>("sel_reco_mgg_log")
@@ -537,7 +736,7 @@ void Analysis::new_sample(const ntup::Event& event) {
     _current_sample = event.mc_channel_number();
     _simulation = event.issimulation();
     
-    _current_resonance = get_resonance(event);
+    _current_resonance = get_sample(event);
     
     switch (_current_sample) {
         // Samples:
@@ -570,10 +769,13 @@ void Analysis::new_sample(const ntup::Event& event) {
     }
     
     switch (_current_sample) {
+        case 105964: // mc11_7TeV.119584.Pythiagamgam15_highmass
+            _is_sm_diphoton_sample = _should_masscut = true;
+            _mass_low = 0;      _mass_high = 200e3;
+            break;
         case 119584: // mc11_7TeV.119584.Pythiagamgam15_highmass
             _is_sm_diphoton_sample = _should_masscut = true;
-            _mass_low = 0;      _mass_high = 800e3;
-            true;
+            _mass_low = 200e3; _mass_high = 800e3;
             break;
         case 145606: // mc11_7TeV.145606.Pythiagamgam15_M_gt_800
             _is_sm_diphoton_sample = _should_masscut = true;
@@ -642,7 +844,6 @@ double Analysis::resolution_plots(double mgg, double mgg_true) {
 
 
 }
-
 
 int main(int argc, const char* argv[]) {
     if (getenv("VALGRIND_STARTUP_PWD") == NULL) {
